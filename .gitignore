@@ -1,0 +1,19 @@
+﻿# Node/Next/Vercel
+node_modules/
+.next/
+out/
+dist/
+build/
+.vercel/
+.turbo/
+.pnpm-store/
+coverage/
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# OS junk
+.DS_Store
+Thumbs.db

@@ -1,0 +1,164 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String  @id @default(cuid())
+  email        String  @unique
+  passwordHash String
+  name         String?
+  role         Role    @default(CUSTOMER)
+  phone        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders Order[]
+  carts  Cart[]
+}
+
+enum Role {
+  ADMIN
+  STAFF
+  CUSTOMER
+}
+
+model Brand {
+  id       String    @id @default(cuid())
+  name     String
+  slug     String    @unique
+  products Product[]
+}
+
+model Category {
+  id       String     @id @default(cuid())
+  name     String
+  slug     String     @unique
+  parentId String?
+  parent   Category?  @relation("CategoryToCategory", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryToCategory")
+  products Product[]
+}
+
+model Product {
+  id              String    @id @default(cuid())
+  sku             String    @unique
+  title           String
+  description     String?
+  brandId         String?
+  brand           Brand?    @relation(fields: [brandId], references: [id])
+  categoryId      String?
+  category        Category? @relation(fields: [categoryId], references: [id])
+  condition       String?
+  material        String?
+  color           String?
+  size            String?
+  weight          Int?
+  oldPrice        Int
+  price           Int
+  discountPercent Int?
+
+  status     String         @default("ACTIVE")
+  createdAt  DateTime       @default(now())
+  images     ProductImage[]
+  inventory  Inventory?
+  orderItems OrderItem[]
+  cartItems  CartItem[]
+}
+
+model ProductImage {
+  id         String  @id @default(cuid())
+  productId  String
+  product    Product @relation(fields: [productId], references: [id])
+  url        String
+  width      Int?
+  height     Int?
+  order      Int?
+  is360      Boolean @default(false)
+  spriteCols Int?
+  spriteRows Int?
+}
+
+model Inventory {
+  id        String  @id @default(cuid())
+  productId String  @unique
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int     @default(1)
+  location  String?
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String?
+  user      User?      @relation(fields: [userId], references: [id])
+  anonId    String?
+  expiresAt DateTime?
+  items     CartItem[]
+}
+
+model CartItem {
+  id        String  @id @default(cuid())
+  cartId    String
+  cart      Cart    @relation(fields: [cartId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int     @default(1)
+  unitPrice Int
+}
+
+model DiscountCode {
+  id                String    @id @default(cuid())
+  code              String    @unique
+  type              String // PERCENT|AMOUNT
+  value             Int
+  minSubtotal       Int?
+  firstPurchaseOnly Boolean   @default(false)
+  startsAt          DateTime?
+  endsAt            DateTime?
+  maxRedemptions    Int?
+  used              Int       @default(0)
+}
+
+model Order {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  status      String   @default("PENDING")
+  subtotal    Int
+  discount    Int      @default(0)
+  shippingFee Int      @default(0)
+  tax         Int      @default(0)
+  total       Int
+  currency    String   @default("VND")
+  createdAt   DateTime @default(now())
+
+  items    OrderItem[]
+  payments Payment[]
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int     @default(1)
+  unitPrice Int
+}
+
+model Payment {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id])
+  provider    String
+  txnId       String?
+  amount      Int
+  status      String   @default("PENDING")
+  payloadJson String?
+  createdAt   DateTime @default(now())
+}
