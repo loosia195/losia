@@ -7,6 +7,59 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/**
+ * =========================
+ * Enums
+ * =========================
+ */
+enum Role {
+  ADMIN
+  STAFF
+  CUSTOMER
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  SOLD
+  DRAFT
+  ARCHIVED
+}
+
+enum ProductCondition {
+  NEW_WITH_TAGS
+  LIKE_NEW
+  GREAT
+  GOOD
+  FAIR
+}
+
+enum DiscountType {
+  PERCENT
+  AMOUNT
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  FULFILLED
+  CANCELED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  AWAITING_CONFIRMATION   // thêm mới
+  PAID
+  FAILED
+  REFUNDED
+}
+
+/**
+ * =========================
+ * Core Models
+ * =========================
+ */
 model User {
   id           String  @id @default(cuid())
   email        String  @unique
@@ -20,12 +73,6 @@ model User {
 
   orders Order[]
   carts  Cart[]
-}
-
-enum Role {
-  ADMIN
-  STAFF
-  CUSTOMER
 }
 
 model Brand {
@@ -46,42 +93,82 @@ model Category {
 }
 
 model Product {
-  id              String    @id @default(cuid())
-  sku             String    @unique
-  title           String
-  description     String?
-  brandId         String?
-  brand           Brand?    @relation(fields: [brandId], references: [id])
-  categoryId      String?
-  category        Category? @relation(fields: [categoryId], references: [id])
-  condition       String?
-  material        String?
-  color           String?
-  size            String?
-  weight          Int?
-  oldPrice        Int
-  price           Int
-  discountPercent Int?
+  id          String  @id @default(cuid())
+  sku         String  @unique
+  title       String
+  description String?
+  brandId     String?
+  brand       Brand?  @relation(fields: [brandId], references: [id])
 
-  status     String         @default("ACTIVE")
-  createdAt  DateTime       @default(now())
+  productTypeId String?
+  productType   ProductType? @relation(fields: [productTypeId], references: [id])
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  condition ProductCondition?
+
+  conditionLabel       String?
+  conditionValue       String?
+  conditionDescription String?
+
+  material String?
+  color    String?
+
+  size String?
+  sizeLabel String? @map("size_label") // nếu cột DB là snake_case
+  sizeOptionId String?
+  sizeOption   SizeOption? @relation(fields: [sizeOptionId], references: [id])
+
+  weight Int?
+
+  retailPrice          Int?
+  estimatedPriceSource String?
+  oldPrice             Int
+  price                Int
+  discountPercent      Int?
+
+  ecoImpactGroup     String?
+  ecoGlassesOfWater  Float?
+  ecoHoursOfLighting Float?
+  ecoKmsOfDriving    Float?
+
+  status    ProductStatus @default(ACTIVE)
+  createdAt DateTime      @default(now())
+
   images     ProductImage[]
   inventory  Inventory?
   orderItems OrderItem[]
   cartItems  CartItem[]
+
+  favoritesCount Int @default(0)
+
+  @@index([status, createdAt])
+  @@index([status, price])
+  @@index([brandId])
+  @@index([categoryId])
+  @@index([productTypeId])
+  @@index([sizeOptionId])
 }
 
 model ProductImage {
-  id         String  @id @default(cuid())
-  productId  String
-  product    Product @relation(fields: [productId], references: [id])
-  url        String
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  url      String
+  thumb    String?
+  alt      String?
+  features String[]
+
   width      Int?
   height     Int?
-  order      Int?
+  order      Int     @default(0)
   is360      Boolean @default(false)
   spriteCols Int?
   spriteRows Int?
+
+  @@index([productId, order])
 }
 
 model Inventory {
@@ -93,52 +180,64 @@ model Inventory {
 }
 
 model Cart {
-  id        String     @id @default(cuid())
-  userId    String?
-  user      User?      @relation(fields: [userId], references: [id])
-  anonId    String?
+  id        String    @id @default(cuid())
+  userId    String?   @unique
+  anonId    String?   @unique
   expiresAt DateTime?
+  user      User?     @relation(fields: [userId], references: [id])
+
   items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([anonId])
+  @@index([userId])
 }
 
 model CartItem {
   id        String  @id @default(cuid())
   cartId    String
-  cart      Cart    @relation(fields: [cartId], references: [id])
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
   productId String
   product   Product @relation(fields: [productId], references: [id])
   quantity  Int     @default(1)
   unitPrice Int
+
+  @@unique([cartId, productId])
+  @@index([productId])
 }
 
 model DiscountCode {
-  id                String    @id @default(cuid())
-  code              String    @unique
-  type              String // PERCENT|AMOUNT
+  id                String       @id @default(cuid())
+  code              String       @unique
+  type              DiscountType
   value             Int
   minSubtotal       Int?
-  firstPurchaseOnly Boolean   @default(false)
+  firstPurchaseOnly Boolean      @default(false)
   startsAt          DateTime?
   endsAt            DateTime?
   maxRedemptions    Int?
-  used              Int       @default(0)
+  used              Int          @default(0)
 }
 
 model Order {
-  id          String   @id @default(cuid())
+  id          String      @id @default(cuid())
+  orderCode   String      @unique
   userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  status      String   @default("PENDING")
+  user        User        @relation(fields: [userId], references: [id])
+  status      OrderStatus @default(PENDING)
   subtotal    Int
-  discount    Int      @default(0)
-  shippingFee Int      @default(0)
-  tax         Int      @default(0)
+  discount    Int         @default(0)
+  shippingFee Int         @default(0)
+  tax         Int         @default(0)
   total       Int
-  currency    String   @default("VND")
-  createdAt   DateTime @default(now())
+  currency    String      @default("VND")
+  createdAt   DateTime    @default(now())
 
   items    OrderItem[]
   payments Payment[]
+
+  @@index([createdAt])
 }
 
 model OrderItem {
@@ -152,13 +251,54 @@ model OrderItem {
 }
 
 model Payment {
-  id          String   @id @default(cuid())
+  id          String        @id @default(cuid())
   orderId     String
-  order       Order    @relation(fields: [orderId], references: [id])
+  order       Order         @relation(fields: [orderId], references: [id])
   provider    String
   txnId       String?
   amount      Int
-  status      String   @default("PENDING")
+  status      PaymentStatus @default(PENDING)
   payloadJson String?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime      @default(now())
+
+  @@index([createdAt])
+}
+
+model ProductType {
+  id       String        @id @default(cuid())
+  name     String        @unique
+  nameVi   String
+  parentId String?
+  parent   ProductType?  @relation("ProductTypeParent", fields: [parentId], references: [id])
+  children ProductType[] @relation("ProductTypeParent")
+
+  products Product[]
+
+  ecoImpact EcoImpact?
+}
+
+model SizeOption {
+  id        String  @id @default(cuid())
+  sortOrder Int
+  sizeLabel String
+  us        String?
+  uk        String?
+  kr        String?
+  jp        String?
+  eu        String?
+
+  products Product[]
+
+  @@unique([sizeLabel, sortOrder], name: "sizeLabel_sortOrder")
+}
+
+model EcoImpact {
+  id              String @id @default(cuid())
+  productGroup    String @unique
+  glassesOfWater  Float
+  hoursOfLighting Float
+  kmsOfDriving    Float
+
+  productTypeId String?      @unique
+  productType   ProductType? @relation(fields: [productTypeId], references: [id])
 }

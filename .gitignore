@@ -1,19 +1,18 @@
-﻿# Node/Next/Vercel
+﻿# dependencies / builds
 node_modules/
 .next/
-out/
 dist/
-build/
-.vercel/
-.turbo/
-.pnpm-store/
 coverage/
+*.log
 
-# Env & secrets
+# env & secrets
 .env
 .env.*
 !.env.example
 
-# OS junk
+# prisma build outputs (giữ schema)
+.prisma/*
+!.prisma/schema.prisma
+
+# misc
 .DS_Store
-Thumbs.db
