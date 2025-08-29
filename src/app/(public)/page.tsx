@@ -1,4 +1,9 @@
 // app/(public)/page.tsx
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
+
 import { formatVND, salePercent } from "@/lib/format";
 import ItemListAnalytics from "@/components/analytics/ItemListAnalytics";
 import ProductCardLink from "@/components/product/ProductCardLink";
@@ -20,8 +25,6 @@ import AboutBlock from "@/components/home/AboutBlock";
 import BlogCarouselSection from "@/components/home/BlogCarouselSection";
 import DiscoverSection from "@/components/home/DiscoverSection";
 
-
-
 import blurManifest from "../../../blur-manifest.json";
 import type { Metadata } from "next";
 
@@ -29,20 +32,20 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
+// ✅ Dùng đường dẫn tương đối tới API nội bộ + try/catch fallback
 async function fetchProducts() {
-  const base = process.env.NEXT_PUBLIC_BASE_URL!;
-  const url = `${base}/api/products?limit=24`;
-
-  let res: Response;
-  if (process.env.NODE_ENV === "production") {
-    res = await fetch(url, { next: { tags: ["products:list"] } });
-  } else {
-    res = await fetch(url, { cache: "no-store" });
+  try {
+    const res = await fetch("/api/products?limit=24", {
+      cache: "no-store", // tránh SSG cache khi build
+      // next: { tags: ["products:list"] }, // nếu anh đang dùng revalidateTag ở nơi khác thì bật lại dòng này
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data?.items) ? data.items : [];
+  } catch {
+    // Fallback an toàn khi build hoặc DNS/Net fail
+    return [];
   }
-
-  if (!res.ok) throw new Error("Failed to load products");
-  const data = await res.json();
-  return data.items as any[];
 }
 
 // Helper blur map
@@ -72,7 +75,6 @@ export default async function HomePage() {
     category: p.category,
   }));
 
-
   return (
     <main className="mx-auto max-w-6xl px-4 py-6">
       {/* Promo full-bleed */}
@@ -97,27 +99,17 @@ export default async function HomePage() {
       <CleanOutSection />
 
       {/* Seasonal Outfits nhận data từ server */}
-      <SeasonOutfitSection/>
+      <SeasonOutfitSection />
 
       <TrendingFinishingTouchesSection />
-
       <EarthMonthBillboard />
-
       <NaturalMaterialsSection />
-
       <ImageSearchBillboard />
-
       <SustainableImpactInfoBlock />
-
       <BrandCardsSection />
-
-      <AboutBlock />      
-
-      <BlogCarouselSection />      
-
-      <DiscoverSection />  
-
-      
+      <AboutBlock />
+      <BlogCarouselSection />
+      <DiscoverSection />
     </main>
   );
 }

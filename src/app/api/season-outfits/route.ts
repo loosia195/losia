@@ -1,19 +1,24 @@
 // src/app/api/season-outfits/route.ts
-import { NextResponse } from "next/server";
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
+
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { ProductStatus } from "@prisma/client"; // 👈 import enum
+import { ProductStatus } from "@prisma/client";
 
 import { PRODUCT_CARD_SELECT, shapeCard } from "@/lib/api-shapes/product";
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const limit = Math.min(Number(searchParams.get("limit") || 16), 48);
+    const sp = req.nextUrl.searchParams;
+    const limit = Math.min(Number(sp.get("limit") || 16), 48);
 
-    // optional filter theo mùa (nếu anh có cột season/tag riêng thì thay where)
+    // optional filter theo mùa: thêm điều kiện vào where nếu có cột season/tag
     const rows = await prisma.product.findMany({
       where: {
-        status: ProductStatus.ACTIVE, // 👈 dùng enum IN HOA
+        status: ProductStatus.ACTIVE,
         // season: "summer-2025",
       },
       select: PRODUCT_CARD_SELECT as any,
@@ -21,10 +26,16 @@ export async function GET(req: Request) {
       take: limit,
     });
 
-    const items = (rows || []).map((p) => shapeCard(p));
-    return NextResponse.json({ items }, { headers: { "Cache-Control": "no-store" } });
+    const items = (rows ?? []).map((p: any) => shapeCard(p));
+    return NextResponse.json(
+      { items },
+      { status: 200, headers: { "Cache-Control": "no-store" } }
+    );
   } catch (err) {
     console.error("GET /api/season-outfits error:", err);
-    return NextResponse.json({ items: [] }, { status: 200, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json(
+      { items: [] },
+      { status: 200, headers: { "Cache-Control": "no-store" } }
+    );
   }
 }

@@ -1,22 +1,29 @@
+// app/api/search/route.ts
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
+
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
-function pickStr(u: URL, key: string) {
-  const v = u.searchParams.get(key);
+function pickStr(sp: URLSearchParams, key: string) {
+  const v = sp.get(key);
   return v && v.trim() ? v.trim() : undefined;
 }
-function digits(u: URL, key: string) {
-  const v = u.searchParams.get(key);
+function digits(sp: URLSearchParams, key: string) {
+  const v = sp.get(key);
   return v && /^\d+$/.test(v) ? v : undefined;
 }
 
 export async function GET(req: NextRequest) {
   try {
-    const url = new URL(req.url);
-    const q = (pickStr(url, "q") || "").slice(0, 120);
-    const page = Number(digits(url, "page") || "1");
+    const sp = req.nextUrl.searchParams;
+
+    const q = (pickStr(sp, "q") || "").slice(0, 120);
+    const page = Number(digits(sp, "page") || "1");
     const pageSize = 24;
-    const sort = pickStr(url, "sort") as
+    const sort = pickStr(sp, "sort") as
       | "relevance"
       | "newest"
       | "price_asc"
@@ -24,25 +31,27 @@ export async function GET(req: NextRequest) {
       | undefined;
 
     const where: any = { status: "ACTIVE" };
+
     if (q) {
       where.OR = [
         { title: { contains: q, mode: "insensitive" } },
-        { brand: { name: { contains: q, mode: "insensitive" } } },     // search theo Brand.name
-        { category: { name: { contains: q, mode: "insensitive" } } },  // search theo Category.name
+        // Nếu schema của anh dùng relation:
+        { brand: { name: { contains: q, mode: "insensitive" } } },
+        { category: { name: { contains: q, mode: "insensitive" } } },
       ];
     }
 
     let orderBy: any = { createdAt: "desc" };
     if (sort === "price_asc") orderBy = { price: "asc" };
     if (sort === "price_desc") orderBy = { price: "desc" };
-    // "relevance": nếu chưa có rank/tsvector, cứ để mặc định createdAt desc
+    // "relevance": nếu chưa có rank thì để mặc định createdAt desc
 
     const [total, items] = await Promise.all([
       prisma.product.count({ where }),
       prisma.product.findMany({
         where,
         orderBy,
-        skip: (page - 1) * pageSize,
+        skip: (Math.max(page, 1) - 1) * pageSize,
         take: pageSize,
         select: {
           id: true,
@@ -77,9 +86,9 @@ export async function GET(req: NextRequest) {
       condition: p.condition,
     }));
 
-    return NextResponse.json({ items: mapped, total });
+    return NextResponse.json({ items: mapped, total, page, pageSize }, { status: 200 });
   } catch (e) {
-    console.error(e);
+    console.error("search API error:", e);
     return NextResponse.json(
       { error: "Failed to load search results" },
       { status: 500 }

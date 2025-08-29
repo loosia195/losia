@@ -1,4 +1,10 @@
-import { NextResponse } from "next/server";
+// app/api/also-shop/route.ts
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;       // tắt SSG cache
+export const runtime = 'nodejs';   // dùng Node.js (an toàn với Prisma)
+
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
 function clampInt(input: string | null, def: number, min: number, max: number) {
@@ -7,9 +13,9 @@ function clampInt(input: string | null, def: number, min: number, max: number) {
   return Math.min(Math.max(Math.floor(n), min), max);
 }
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = req.nextUrl;
     const currentBrand = searchParams.get("currentBrand") || undefined;
     const limitBrands = clampInt(searchParams.get("limitBrands"), 3, 1, 8);
     const limitPerBrand = clampInt(searchParams.get("limitPerBrand"), 3, 1, 6);
@@ -21,7 +27,6 @@ export async function GET(req: Request) {
       take: 300,
       select: {
         // brand có thể là string (column) hoặc relation { name }
-        // dùng any để tương thích cả 2 schema mà không cần TS directive
         brand: true as any,
       },
     });
@@ -56,10 +61,12 @@ export async function GET(req: Request) {
         },
       });
 
-      const filtered = (candidates as any[]).filter((p) => {
-        const name = typeof p.brand === "string" ? p.brand : p.brand?.name ?? null;
-        return name === b;
-      }).slice(0, limitPerBrand);
+      const filtered = (candidates as any[])
+        .filter((p) => {
+          const name = typeof p.brand === "string" ? p.brand : p.brand?.name ?? null;
+          return name === b;
+        })
+        .slice(0, limitPerBrand);
 
       if (filtered.length === 0) continue;
 
@@ -78,9 +85,9 @@ export async function GET(req: Request) {
       result.push({ brand: b, products: mapped });
     }
 
-    return NextResponse.json(result);
+    return NextResponse.json(result, { status: 200 });
   } catch (e) {
     console.error("also-shop API error:", e);
-    return NextResponse.json([]);
+    return NextResponse.json([], { status: 200 });
   }
 }
