@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import ProductAnalytics from "@/components/analytics/ProductAnalytics";
 import ProductImageSection from "@/components/product/ProductImageGallery/ProductImageSection";
 import ProductDetailSection from "@/components/product/ProductDetailSection/ProductDetailSection";
+import MoreFromSellerSection from "@/components/product/MoreFromSellerSection";
 import PeopleAlsoShop from "@/components/product/PeopleAlsoShop";
 import { formatVND } from "@/lib/format";
 
@@ -229,6 +230,17 @@ export default async function ProductDetailPage({ params }: PageProps) {
       <div className="md:col-span-2">
         <div className="h-px w-full bg-gradient-to-r from-transparent via-gray-200 to-transparent my-10" />
       </div>
+
+      {/* PeopleAlsoShop */}
+      <div className="md:col-span-2">
+  <MoreFromSellerSection
+    currentProductId={product.id}
+    sellerId={product.sellerId}     // chưa có thì undefined
+    sellerLabel="this seller"
+    limit={8}
+    variant="losia"               
+  />
+</div>
 
       {/* PeopleAlsoShop */}
       <div className="md:col-span-2">

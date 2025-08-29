@@ -20,12 +20,15 @@ type ProductCard = {
   images?: Array<{ url?: string | null; main?: string | null; thumb?: string | null; order?: number | null }>;
 };
 
+/** Thêm variant vào Props để khớp với chỗ gọi từ PDP */
 type Props = {
   currentProductId: string;
   sellerId?: string;
   limit?: number;
   showTitle?: boolean;
   sellerLabel?: string;
+  /** Preset UI; mặc định "losia" để đảm bảo section hiển thị đúng */
+  variant?: "losia" | "default" | "thredup" | string;
 };
 
 /** ====== Helpers ====== */
@@ -63,6 +66,7 @@ export default function MoreFromSellerSection({
   limit = 8,
   showTitle = true,
   sellerLabel = "this seller",
+  variant = "losia", // ✅ default để khớp với PDP
 }: Props) {
   const [items, setItems] = useState<ProductCard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -137,8 +141,11 @@ export default function MoreFromSellerSection({
     el.scrollBy({ left: (dir === "left" ? -1 : 1) * Math.round(el.clientWidth * 0.9), behavior: "smooth" });
   };
 
+  // Dùng data-variant để tránh warning “param never used” và tiện debug CSS
+  const sectionAttrs = { "data-variant": variant };
+
   return (
-    <section className="mt-12">
+    <section className="mt-12" {...sectionAttrs}>
       {showTitle && (
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold tracking-tight">Các Sản Phẩm Khác Từ Người Bán</h2>

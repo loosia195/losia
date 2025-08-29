@@ -158,27 +158,35 @@ export default function ProductsPage() {
    */
   useEffect(() => {
     let mounted = true;
+    const controller = new AbortController();
+
     async function load() {
       setLoading(true);
       setErr(null);
       try {
-        const base = process.env.NEXT_PUBLIC_BASE_URL || "";
-        const url = `${base}/api/products?limit=200`;
-        const res = await fetch(url, { cache: "no-store" });
+        const res = await fetch(`/api/products?limit=200`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
         if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
         const data = await res.json();
         if (mounted) {
+          // API có thể trả mảng hoặc { items, total }
           setAllProducts(Array.isArray(data) ? data : data?.items ?? []);
         }
       } catch (e: any) {
-        if (mounted) setErr(e?.message || "Lỗi tải sản phẩm");
+        if (mounted && e?.name !== "AbortError") {
+          setErr(e?.message || "Lỗi tải sản phẩm");
+        }
       } finally {
         if (mounted) setLoading(false);
       }
     }
+
     load();
     return () => {
       mounted = false;
+      controller.abort();
     };
   }, []);
 
