@@ -1,6 +1,7 @@
 // app/(public)/product/[id]/page.tsx
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 
 import ProductAnalytics from "@/components/analytics/ProductAnalytics";
 import ProductImageSection from "@/components/product/ProductImageGallery/ProductImageSection";
@@ -11,6 +12,8 @@ import { formatVND } from "@/lib/format";
 /** ---- ÉP ROUTE LUÔN DYNAMIC & KHÔNG DÙNG CACHE STATIC ---- */
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+/** Đảm bảo môi trường Node (an toàn cho fetch server) */
+export const runtime = "nodejs";
 
 /** ---- Helpers (map alias -> group lưu trong EcoImpact) ---- */
 const GROUP_ALIAS: Record<string, string> = {
@@ -46,25 +49,33 @@ function capitalizeFirst(s: string) {
 
 /** ---- Base URL an toàn cho mọi môi trường ----
  * Ưu tiên:
- * 1) NEXT_PUBLIC_SITE_URL (https://losia.vn)
- * 2) VERCEL_URL (tự động set ở Vercel, KHÔNG có protocol)
- * 3) NEXT_PUBLIC_BASE_URL (nếu anh có set)
+ * 1) headers() → x-forwarded-proto/host (Preview/Prod)
+ * 2) VERCEL_URL (hostname khi chạy ở Vercel)
+ * 3) SITE_URL (chỉ set ở Production = https://losia.vn)
  * 4) localhost (dev)
+ * LƯU Ý: KHÔNG dùng NEXT_PUBLIC_SITE_URL ở server fetch.
  */
 function getBaseUrl() {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
-  if (siteUrl) return siteUrl;
-  const vercel = process.env.VERCEL_URL?.replace(/\/$/, "");
-  if (vercel) return `https://${vercel}`;
-  const base = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, "");
-  if (base) return base;
+  // Client side → dùng relative
+  if (typeof window !== "undefined") return "";
+
+  try {
+    const h = headers();
+    const proto = h.get("x-forwarded-proto") ?? "https";
+    const host = h.get("x-forwarded-host") ?? h.get("host");
+    if (host) return `${proto}://${host}`;
+  } catch {
+    // headers() có thể không khả dụng trong một số ngữ cảnh
+  }
+
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL.replace(/\/$/, "")}`;
+  if (process.env.SITE_URL) return process.env.SITE_URL.replace(/\/$/, "");
   return "http://localhost:3000";
 }
 
 async function fetchProduct(id: string) {
   const base = getBaseUrl();
   const res = await fetch(`${base}/api/products/${id}`, {
-    // Tránh cache cứng gây sai host/stale ở prod
     cache: "no-store",
   });
   if (res.status === 404) return null;
@@ -75,7 +86,6 @@ async function fetchProduct(id: string) {
 type PageProps = { params: { id: string } };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  // Bọc try/catch để metadata không làm sập route khi fetch lỗi
   try {
     const p = await fetchProduct(params.id);
     if (!p) return { title: "Sản phẩm không tồn tại | LOSIA" };
@@ -121,7 +131,6 @@ export default async function ProductDetailPage({ params }: PageProps) {
   try {
     product = await fetchProduct(params.id);
   } catch (e) {
-    // Ném lỗi để error.tsx bắt, nhưng vẫn fallback hợp lý
     console.error("fetchProduct failed:", e);
     throw e;
   }
@@ -138,7 +147,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
     : [];
   const gallery = images.length ? images : ["/assets/images/main/product1.jpg"];
 
-  // ---- Xác định "group" để map EcoImpact
+  // Xác định "group" để map EcoImpact
   const rawGroup =
     product?.productType?.parent?.name ||
     product?.ecoImpactGroup ||
@@ -147,7 +156,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
     "Dress";
   const group = normalizeGroup(rawGroup);
 
-  // HỢP NHẤT SIZE server-side
+  // Hợp nhất size server-side
   const unifiedSizeLabel =
     product?.size && String(product.size).trim()
       ? String(product.size).trim()
