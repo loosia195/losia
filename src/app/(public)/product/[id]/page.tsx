@@ -231,7 +231,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
         <div className="h-px w-full bg-gradient-to-r from-transparent via-gray-200 to-transparent my-10" />
       </div>
 
-      {/* PeopleAlsoShop */}
+            {/* MoreFromSellerSection */}
       <div className="md:col-span-2">
   <MoreFromSellerSection
     currentProductId={product.id}
