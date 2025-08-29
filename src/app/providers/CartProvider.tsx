@@ -1,3 +1,4 @@
+// src/app/providers/CartProvider.tsx
 "use client";
 
 import {
@@ -37,6 +38,7 @@ export type CartState = {
 export type CartContextType = {
   /** Derivatives đã chuẩn hóa — dùng cho UI */
   items: CartItem[];
+  cartItems: CartItem[]; // alias để code cũ dùng cartItems không lỗi
   subtotal: number;
   count: number;
 
@@ -45,8 +47,9 @@ export type CartContextType = {
 
   /** Actions */
   refresh: () => Promise<void>;
-  clearLocal: () => void;      // chỉ clear trong memory để tránh flicker
+  clearLocal: () => void; // chỉ clear trong memory để tránh flicker
   clearCart: () => Promise<void>; // gọi API xóa cart + cập nhật UI
+  removeItem: (productId: string) => Promise<void>;
 };
 
 /** ---------- Utils ---------- */
@@ -134,6 +137,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  /** ❌ Bỏ 1 item khỏi giỏ (gọi API nếu có, luôn cập nhật local cho mượt) */
+  const removeItem = useCallback(async (productId: string) => {
+    try {
+      await fetch(`/api/cart?productId=${encodeURIComponent(productId)}`, {
+        method: "DELETE",
+        credentials: "include",
+        cache: "no-store",
+      });
+    } catch {}
+    setCart((prev) => {
+      const detailed = prev.detailed.filter((it) => it.productId !== productId);
+      const count = detailed.reduce((s, it) => s + (it.qty || 0), 0);
+      const subtotal = detailed.reduce((sum, it) => {
+        const price = typeof it.product?.price === "number" ? it.product.price : 0;
+        return sum + price * (it.qty || 0);
+      }, 0);
+      return { ...prev, detailed, count, subtotal };
+    });
+    dispatchCartChanged();
+  }, []);
+
   useEffect(() => {
     refresh();
   }, [refresh]);
@@ -154,6 +178,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const value: CartContextType = {
     items,
+    cartItems: items, // alias
     subtotal: safeSubtotal,
     count:
       typeof cart.count === "number"
@@ -164,6 +189,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     refresh,
     clearLocal,
     clearCart,
+    removeItem,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
