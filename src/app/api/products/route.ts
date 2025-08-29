@@ -4,6 +4,7 @@ import type { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { PRODUCT_CARD_SELECT, shapeCard } from '@/lib/api-shapes/product';
 import type { $Enums } from '@prisma/client';
+export const runtime = "nodejs";
 
 type ProductConditionT = $Enums.ProductCondition;
 type ProductStatusT = $Enums.ProductStatus;

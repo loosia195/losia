@@ -2,6 +2,8 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma'; // ✅ dùng default import, KHÔNG phải { prisma }
+export const runtime = "nodejs";
+
 
 /** Cookie cũ lưu list item client-side (sẽ migrate sang DB) */
 const LEGACY_CART_COOKIE = 'losia_cart_v1';

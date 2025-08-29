@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { PRODUCT_DETAIL_SELECT, shapeDetail } from '@/lib/api-shapes/product';
+export const runtime = "nodejs";
 
 export const dynamic = 'force-dynamic';
 
