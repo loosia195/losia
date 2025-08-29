@@ -20,12 +20,15 @@ export type CartItem = {
     title: string;
     price: number;
     oldPrice: number | null;
+    newPrice?: number | null;      // <-- thêm
+    retailPrice?: number | null;   // <-- thêm
     brand?: string;
     category?: string;
     cover: string | null;
     inStock: boolean;
   };
 };
+
 
 export type CartState = {
   id?: string | null;
