@@ -165,13 +165,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
 <div className="md:col-span-2">
   <div className="h-px w-full bg-gradient-to-r from-transparent via-gray-200 to-transparent my-10" />
 
-  <MoreFromSellerSection
-    currentProductId={product.id}
-    sellerId={product.sellerId}     // chưa có thì undefined
-    sellerLabel="this seller"
-    limit={8}
-    variant="losia"               
-  />
+
 </div>
 
 <div className="md:col-span-2">
