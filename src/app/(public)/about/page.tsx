@@ -82,19 +82,19 @@ const TEAM = [
   {
     name: "Ha Hoang",
     role: "CEO & Founder",
-    avatar: "/assets/images/about/hoangha.png",
+    avatar: "/assets/images/about/1.png",
     bio: "Hơn 7 năm kinh nghiệm secondhand retail và chuỗi cung ứng. Hà dẫn dắt toàn bộ quy trình vận hành, biến mỗi món đồ thành chuẩn “như mới” trong 48h.",
   },
   {
     name: "Thanh Tran",
     role: "Co-Founder - CTO",
-    avatar: "/assets/images/about/tranthanh.png",
+    avatar: "/assets/images/about/2.png",
     bio: " Doanh nhân xã hội với hành trình từ Lagom Vietnam đến LOSIA. Đam mê thời trang bền vững, Thanh Trần mang tầm nhìn “Secondhand First” để xây dựng nền tảng resale hàng đầu Việt Nam.",
   },
   {
     name: "Tai Hoang",
     role: "Lead Developer",
-    avatar: "/assets/images/about/hoangtai.jpg",
+    avatar: "/assets/images/about/3.png",
     bio: "Thạc sĩ Khoa học Máy tính với hơn 10 năm quản lý hạ tầng. Tài thiết kế backbone cloud-native, đảm bảo LOSIA luôn ổn định, nhanh và sẵn sàng mở rộng.",
   },
 ];
